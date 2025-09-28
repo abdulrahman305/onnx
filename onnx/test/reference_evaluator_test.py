@@ -62,6 +62,7 @@ from onnx.reference.ops import load_op
 from onnx.reference.ops._op_common_indices import _get_indices, _is_out
 from onnx.reference.ops._op_list import Cast_19, Celu
 from onnx.reference.ops.aionnx_preview_training._op_list import Adam
+from onnx.reference.ops.op_attention import _apply_causal
 from onnx.reference.ops.op_celu import _vcelu1
 from onnx.reference.ops.op_col2im import (
     _col2im_naive_implementation_2d,
@@ -1229,7 +1230,7 @@ class TestReferenceEvaluator(unittest.TestCase):
 
             def _run(self, x, alpha=None):
                 del x, alpha
-                return tuple()
+                return ()
 
         X = make_tensor_value_info("X", TensorProto.FLOAT, [None, None])
         Y = make_tensor_value_info("Y", TensorProto.FLOAT, [None])
@@ -4289,7 +4290,7 @@ class TestReferenceEvaluator(unittest.TestCase):
         ref = ReferenceEvaluator(model)
         x = np.array(1, dtype=np.float32)
         got = ref.run(None, {"X": x})[0]
-        self.assertEqual(got.shape, tuple())
+        self.assertEqual(got.shape, ())
         self.assertEqual(got.dtype, np.uint16)
         assert_allclose(np.array(1, dtype=np.uint16), got)
 
@@ -4317,7 +4318,7 @@ class TestReferenceEvaluator(unittest.TestCase):
         ref = ReferenceEvaluator(model)
         x = np.array(1, dtype=np.float32)
         got = ref.run(None, {"X": x})[0]
-        self.assertEqual(got.shape, tuple())
+        self.assertEqual(got.shape, ())
         self.assertEqual(got.dtype, np.uint16)
         assert_allclose(np.array(1, dtype=np.uint16), got)
 
@@ -6117,6 +6118,28 @@ class TestReferenceEvaluator(unittest.TestCase):
         ref = ReferenceEvaluator(model)
         got = ref.run(None, {"X": x})
         self.assertEqual(x.dtype, got[0].dtype)
+
+    def test_apply_causal(self):
+        m = np.ones((3, 3), dtype=np.float16)
+        _apply_causal(m, 0)
+        self.assertEqual(m.dtype, np.float16)
+        assert_allclose(
+            np.array(
+                [[1, -np.inf, -np.inf], [1, 1, -np.inf], [1, 1, 1]], dtype=m.dtype
+            ),
+            m,
+        )
+
+        m = np.zeros((3, 4), dtype=np.float16)
+        _apply_causal(m, 1)
+        self.assertEqual(m.dtype, np.float16)
+        assert_allclose(
+            np.array(
+                [[0, 0, -np.inf, -np.inf], [0, 0, 0, -np.inf], [0, 0, 0, 0]],
+                dtype=m.dtype,
+            ),
+            m,
+        )
 
 
 if __name__ == "__main__":

@@ -635,6 +635,10 @@ ONNX_ML_OPERATOR_SET_SCHEMA(
           if (has_int64s == has_strings) {
             fail_shape_inference("Exactly one of 'cats_*' attributes must be provided.");
           }
+          // Check if input shape is available before accessing it
+          if (!hasNInputShapes(ctx, 1)) {
+            return;
+          }
           const TensorShapeProto& input_shape = ctx.getInputType(0)->tensor_type().shape();
           TensorShapeProto* shape = ctx.getOutputType(0)->mutable_tensor_type()->mutable_shape();
           for (int i = 0; i < input_shape.dim_size(); i++) {
@@ -697,7 +701,7 @@ ONNX_ML_OPERATOR_SET_SCHEMA(
             "T2",
             {"tensor(string)", "tensor(int64)"},
             "The output type will be a tensor of strings or integers, depending on which of the classlabels_* "
-            "attributes is used. Its size will match the bactch size of the input.")
+            "attributes is used. Its size will match the batch size of the input.")
         .Attr(
             "kernel_type",
             "The kernel type, one of 'LINEAR,' 'POLY,' 'RBF,' 'SIGMOID'.",
