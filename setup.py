@@ -48,6 +48,7 @@ ONNX_DISABLE_STATIC_REGISTRATION = os.getenv("ONNX_DISABLE_STATIC_REGISTRATION")
 ONNX_PREVIEW_BUILD = os.getenv("ONNX_PREVIEW_BUILD") == "1"
 
 USE_MSVC_STATIC_RUNTIME = os.getenv("USE_MSVC_STATIC_RUNTIME", "0") == "1"
+USE_NINJA = os.getenv("USE_NINJA", "1") != "0"
 DEBUG = os.getenv("DEBUG", "0") == "1"
 COVERAGE = os.getenv("COVERAGE", "0") == "1"
 
@@ -174,6 +175,9 @@ class CmakeBuild(setuptools.Command):
                 "-DONNX_BUILD_PYTHON=ON",
                 f"-DONNX_NAMESPACE={ONNX_NAMESPACE}",
             ]
+            if USE_NINJA and not WINDOWS and shutil.which("ninja"):
+                cmake_args.append("-DCMAKE_GENERATOR=Ninja")
+
             if COVERAGE:
                 cmake_args.append("-DONNX_COVERAGE=ON")
             if COVERAGE or DEBUG:
@@ -184,10 +188,16 @@ class CmakeBuild(setuptools.Command):
             if WINDOWS:
                 if USE_MSVC_STATIC_RUNTIME:
                     cmake_args.append("-DONNX_USE_MSVC_STATIC_RUNTIME=ON")
-                if "arm" in platform.machine().lower():
-                    cmake_args.extend(["-A", "ARM64"])
-                else:
-                    cmake_args.extend(["-A", "x64", "-T", "host=x64"])
+                if platform.architecture()[0] == "64bit":
+                    if "arm" in platform.machine().lower():
+                        cmake_args.extend(["-A", "ARM64"])
+                    else:
+                        cmake_args.extend(["-A", "x64", "-T", "host=x64"])
+                else:  # noqa: PLR5501
+                    if "arm" in platform.machine().lower():
+                        cmake_args.extend(["-A", "ARM"])
+                    else:
+                        cmake_args.extend(["-A", "Win32", "-T", "host=x86"])
             if ONNX_ML:
                 cmake_args.append("-DONNX_ML=1")
             if ONNX_VERIFY_PROTO3:
