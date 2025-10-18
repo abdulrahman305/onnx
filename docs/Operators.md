@@ -18386,6 +18386,30 @@ a = np.random.randn(1, 2, 3, 4).astype(np.float32)
 b = np.random.randn(1, 2, 4, 3).astype(np.float32)
 c = np.matmul(a, b)
 expect(node, inputs=[a, b], outputs=[c], name="test_matmul_4d")
+
+# broadcasting
+a = np.random.randn(3, 1, 3, 4).astype(np.float32)
+b = np.random.randn(1, 2, 4, 2).astype(np.float32)
+c = np.matmul(a, b)
+expect(node, inputs=[a, b], outputs=[c], name="test_matmul_bcast")
+
+# 1d + 3d
+a = np.random.randn(4).astype(np.float32)
+b = np.random.randn(2, 4, 1).astype(np.float32)
+c = np.matmul(a, b)
+expect(node, inputs=[a, b], outputs=[c], name="test_matmul_1d_3d")
+
+# 3d + 1d
+a = np.random.randn(1, 2, 4, 3).astype(np.float32)
+b = np.random.randn(3).astype(np.float32)
+c = np.matmul(a, b)
+expect(node, inputs=[a, b], outputs=[c], name="test_matmul_4d_1d")
+
+# 1d + 1d
+a = np.random.randn(3).astype(np.float32)
+b = np.random.randn(3).astype(np.float32)
+c = np.matmul(a, b)
+expect(node, inputs=[a, b], outputs=[c], name="test_matmul_1d_1d")
 ```
 
 </details>
@@ -31832,7 +31856,7 @@ expect(
   output = np.copy(data)
   update_indices = indices.shape[:-1]
   for idx in np.ndindex(update_indices):
-      output[indices[idx]] = updates[idx]
+      output[tuple(indices[idx])] = updates[idx]
   ```
 
   The order of iteration in the above loop is not specified.
@@ -31849,7 +31873,7 @@ expect(
   output = np.copy(data)
   update_indices = indices.shape[:-1]
   for idx in np.ndindex(update_indices):
-      output[indices[idx]] = f(output[indices[idx]], updates[idx])
+      output[tuple(indices[idx])] = f(output[tuple(indices[idx])], updates[idx])
   ```
 
   where the `f` is `+`, `*`, `max` or `min` as specified.
@@ -38157,9 +38181,16 @@ expect(
 
 ### <a name="Transpose"></a><a name="transpose">**Transpose**</a>
 
-  Transpose the input tensor similar to numpy.transpose. For example, when
-  perm=(1, 0, 2), given an input tensor of shape (1, 2, 3), the output shape
-  will be (2, 1, 3).
+  Returns a transpose of the input tensor. (Similar to `numpy.transpose`).
+  The optional attribute `perm` must be a permutation of the dimensions of
+  the input tensor. Axis `i` of the output tensor corresponds to the axis
+  `perm[i]` of the input tensor.
+  For example, when perm=(1, 0, 2), given an input tensor of shape (1, 2, 3),
+  the output shape will be (2, 1, 3).
+  When perm=(1, 2, 0), given an input tensor of shape (1, 2, 3),
+  the output shape will be (2, 3, 1).
+  If the attribute `perm` is omitted, its default value is `(n-1, ..., 0)`,
+  where `n` is the rank of the input tensor.
 
 #### Version
 
